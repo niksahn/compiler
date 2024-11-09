@@ -10,148 +10,146 @@
 
         namespace compiler
         {
-            public class Translator
-            {
-                private StringBuilder outputCode = new StringBuilder();
-
-                public string Translate(SyntaxTreeNode root)
+           
+                public class Translator
                 {
-                    TraverseNode(root);
-                    return outputCode.ToString();
-                }
+                    private StringBuilder outputCode = new StringBuilder();
 
-                private void TraverseNode(SyntaxTreeNode node)
-                {
-                    switch (node.Token.Value)
+                    public string Translate(SyntaxTreeNode root)
                     {
-                        case "<Программа>":
-                            outputCode.AppendLine("public class Program");
-                            outputCode.AppendLine("{");
-                            outputCode.AppendLine("    public static void Main()");
-                            outputCode.AppendLine("    {");
-                            TraverseChildren(node);
-                            outputCode.AppendLine("    }");
-                            outputCode.AppendLine("}");
-                            break;
-
-                        case "<Объявление_переменных>":
-                            outputCode.Append("int ");
-                            TraverseChildren(node);
-                            outputCode.AppendLine(";");
-                            break;
-
-                        case "<Список_переменных>":
-                            TraverseChildren(node);
-                            break;
-
-                        case "<Доп_переменные>":
-                            outputCode.Append(", ");
-                            TraverseChildren(node);
-                            break;
-
-                        case "<Описание_вычислений>":
-                        case "<Список_операторов>":
-                        case "<Список_операторов_хвост>":
-                            TraverseChildren(node);
-                            break;
-
-                        case "<Присваивание>":
-                            TraverseNode(node.Children[0]); // Идентификатор
-                            outputCode.Append(" = ");
-                            TraverseNode(node.Children[2]); // Выражение
-                            outputCode.AppendLine(";");
-                            break;
-
-                        case "<Идент>":
-                            outputCode.Append(node.Children[0].Token.Value);
-                            break;
-
-                        case "<Запись>":
-                            outputCode.Append("Console.WriteLine(");
-                            TraverseNode(node.Children[2]); // Список идентификаторов
-                            outputCode.AppendLine(");");
-                            break;
-
-                        case "<Список_идентификаторов>":
-                            TraverseChildren(node);
-                            break;
-
-                        case "<Доп_идентификаторы>":
-                            outputCode.Append(", ");
-                            TraverseChildren(node);
-                            break;
-
-                        case "<Выражение>":
-                            TraverseChildren(node);
-                            break;
-
-                        case "<Подвыражение>":
-                            // Проверка на наличие открывающей и закрывающей скобки в подвыражении
-                            if (node.Children.Count > 0 && node.Children[0].Token.Value == "(")
-                            {
-                                outputCode.Append("(");
-                                TraverseChildren(node);
-                            }
-                            else
-                            {
-                                TraverseChildren(node); // Обычное подвыражение
-                            }
-                            break;
-
-
-                        case "<Подвыражение_хвост>":
-                            if (node.Token.Type == TokenType.RPAREN)
-                            {
-                                outputCode.Append(")");
-                            }
-                            if (node.Children.Count > 0)
-                            {
-                                outputCode.Append(" "); 
-                                TraverseChildren(node);
-                            }
-                            break;
-
-                        case "<Бин_оп>":
-                        case "<Ун_оп>":
-                            outputCode.Append(node.Children[0].Token.Value);
-                            break;
-
-                        case "<Конст>":
-                            outputCode.Append(node.Children[0].Token.Value);
-                            break;
-
-                        case "<Цикл>":
-                            outputCode.Append("for (int ");
-                            TraverseNode(node.Children[1]); // Идентификатор
-                            outputCode.Append(" = ");
-                            TraverseNode(node.Children[3]); // Начальное значение
-                            outputCode.Append("; ");
-                            TraverseNode(node.Children[1]);
-                            outputCode.Append(" <= ");
-                            TraverseNode(node.Children[5]); // Конечное значение
-                            outputCode.Append("; ");
-                            TraverseNode(node.Children[1]);
-                            outputCode.Append("++)");
-                            outputCode.AppendLine("{");
-                            TraverseNode(node.Children[7]); // Список операторов
-                            outputCode.AppendLine("}");
-                            break;
-
-                        default:
-                            TraverseChildren(node);
-                            break;
+                        TraverseNode(root);
+                        return outputCode.ToString();
                     }
-                }
 
-                private void TraverseChildren(SyntaxTreeNode node)
-                {
-                    foreach (var child in node.Children)
+                    private void TraverseNode(SyntaxTreeNode node)
                     {
-                        TraverseNode(child);
+                        // Проверка на тип символа (нетерминал или терминал) через Symbol
+                        if (node.Symbol.IsNonTerminal())
+                        {
+                            switch (node.Symbol.NonTerminal)
+                            {
+                                case NonTerminal.Программа:
+                                    outputCode.AppendLine("public class Program");
+                                    outputCode.AppendLine("{");
+                                    outputCode.AppendLine("    public static void Main()");
+                                    outputCode.AppendLine("    {");
+                                    TraverseChildren(node);
+                                    outputCode.AppendLine("    }");
+                                    outputCode.AppendLine("}");
+                                    break;
+
+                                case NonTerminal.Объявление_переменных:
+                                    outputCode.Append("int ");
+                                    TraverseChildren(node);
+                                    outputCode.AppendLine(";");
+                                    break;
+
+                                case NonTerminal.Список_переменных:
+                                case NonTerminal.Доп_переменные:
+                                case NonTerminal.Описание_вычислений:
+                                case NonTerminal.Список_операторов:
+                                case NonTerminal.Список_операторов_хвост:
+                                case NonTerminal.Список_идентификаторов:
+                                case NonTerminal.Доп_идентификаторы:
+                                case NonTerminal.Выражение:
+                                    TraverseChildren(node);
+                                    break;
+
+                                case NonTerminal.Присваивание:
+                                    TraverseNode(node.Children[0]); // Идентификатор
+                                    outputCode.Append(" = ");
+                                    TraverseNode(node.Children[2]); // Выражение
+                                    outputCode.AppendLine(";");
+                                    break;
+
+                                case NonTerminal.Идент:
+                                    outputCode.Append(node.Children[0].Symbol.Token.Value);
+                                    break;
+
+                                case NonTerminal.Запись:
+                                    outputCode.Append("Console.WriteLine(");
+                                    TraverseNode(node.Children[2]); // Список идентификаторов
+                                    outputCode.AppendLine(");");
+                                    break;
+
+                                case NonTerminal.Подвыражение:
+                                 
+                                        TraverseChildren(node);
+                                   
+                                    break;
+
+                                case NonTerminal.Подвыражение_хвост:
+                                        outputCode.Append(" ");
+                                        TraverseChildren(node);
+                                 
+                                    break;
+
+                                case NonTerminal.Бин_оп:
+                                case NonTerminal.Ун_оп:
+                                case NonTerminal.Конст:
+                                    outputCode.Append(node.Children[0].Symbol.Token.Value);
+                                    break;
+
+                                case NonTerminal.Цикл:
+                                    outputCode.Append("for (int ");
+                                    TraverseNode(node.Children[1]); // Идентификатор
+                                    outputCode.Append(" = ");
+                                    TraverseNode(node.Children[3]); // Начальное значение
+                                    outputCode.Append("; ");
+                                    TraverseNode(node.Children[1]);
+                                    outputCode.Append(" <= ");
+                                    TraverseNode(node.Children[5]); // Конечное значение
+                                    outputCode.Append("; ");
+                                    TraverseNode(node.Children[1]);
+                                    outputCode.Append("++)");
+                                    outputCode.AppendLine("{");
+                                    TraverseNode(node.Children[7]); // Список операторов
+                                    outputCode.AppendLine("}");
+                                    break;
+
+                                default:
+                                    TraverseChildren(node);
+                                    break;
+                            }
+                        }
+                        else
+                        {
+                            // Обработка терминала: фильтрация ненужных токенов
+                            if (ShouldIncludeToken(node.Symbol.Token))
+                            {
+                                outputCode.Append(node.Symbol.Token.Value);
+                            }
+                        }
+                    }
+
+                    private void TraverseChildren(SyntaxTreeNode node)
+                    {
+                        foreach (var child in node.Children)
+                        {
+                            TraverseNode(child);
+                        }
+                    }
+
+                    // Функция для фильтрации терминалов, которые не нужно добавлять в код C#
+                    private bool ShouldIncludeToken(Token token)
+                    {
+                        switch (token.Type)
+                        {
+                            case TokenType.BEGIN:
+                            case TokenType.END:
+                            case TokenType.VAR:
+                            case TokenType.INTEGER:
+                            case TokenType.COLON:
+
+                            case TokenType.SEMICOLON: // Можно пропустить ';', если он не обязателен в коде
+                                return false;
+                            default:
+                                return true;
+                        }
                     }
                 }
             }
-        }
 
+        }
     }
-}
+   

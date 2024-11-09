@@ -6,14 +6,72 @@ using System.Threading.Tasks;
 
 namespace compiler
 {
-    public class SyntaxTreeNode
+    using System;
+    using System.Collections.Generic;
+
+    public class Symbol
     {
         public Token Token { get; }
-        public List<SyntaxTreeNode> Children { get; }
+        public NonTerminal? NonTerminal { get; }
 
-        public SyntaxTreeNode(Token token)
+        // Конструктор для терминала (токена)
+        public Symbol(Token token)
         {
             Token = token;
+            NonTerminal = null;
+        }
+
+        // Конструктор для нетерминала
+        public Symbol(NonTerminal nonTerminal)
+        {
+            Token = null;
+            NonTerminal = nonTerminal;
+        }
+
+        // Метод для получения значения символа (токена или нетерминала)
+        public string GetValue()
+        {
+            return Token != null ? ( Token.Value + " " + Token.Type ) :( NonTerminal.ToString());
+        }
+
+        public bool IsNonTerminal() { return NonTerminal != null; }
+    }
+
+    public enum NonTerminal
+    {
+        Программа,
+        Объявление_переменных,
+        Список_переменных,
+        Доп_переменные,
+        Описание_вычислений,
+        Список_операторов,
+        Список_операторов_хвост,
+        Оператор,
+        Присваивание,
+        Выражение,
+        Подвыражение,
+        Подвыражение_хвост,
+        Ун_оп,
+        Бин_оп,
+        Операнд,
+        Идент,
+        Конст,
+        Чтение,
+        Запись,
+        Список_идентификаторов,
+        Доп_идентификаторы,
+        Цикл
+    }
+
+    public class SyntaxTreeNode
+    {
+        public Symbol Symbol { get; }
+        public List<SyntaxTreeNode> Children { get; }
+
+        // Конструктор, принимающий объект Symbol (терминал или нетерминал)
+        public SyntaxTreeNode(Symbol symbol)
+        {
+            Symbol = symbol;
             Children = new List<SyntaxTreeNode>();
         }
 
@@ -24,19 +82,21 @@ namespace compiler
 
         public void PrintTree(int indent = 0)
         {
-            // Generate a string of tabs for indentation
             string indentString = new string('\t', indent);
+            Console.WriteLine($"{indentString}- {Symbol.GetValue()}");
 
-            // Print the current node's token
-            Console.WriteLine($"{indentString}- {Token.Value}");
-
-            // Recursively print each child node, increasing the indent level
             foreach (var child in Children)
             {
                 child.PrintTree(indent + 1);
             }
         }
+
+        public Boolean IsIdent()
+        {
+            return Symbol.Token != null && Symbol.Token.Type == TokenType.IDENT;
+        }
     }
+
 
     internal class Syntacsys
     {
@@ -58,24 +118,28 @@ namespace compiler
 
         public SyntaxTreeNode ParseProgram()
         {
-            SyntaxTreeNode root = new SyntaxTreeNode(new Token(TokenType.VAR, "E")); // Корень дерева
-            Parse("<Программа>", root);
+            // Создаем корневой узел для дерева с нетерминалом "Программа"
+            SyntaxTreeNode root = new SyntaxTreeNode(new Symbol(NonTerminal.Программа));
+            Parse(NonTerminal.Программа, root);
             return root;
         }
 
-        private void Parse(string nonTerminal, SyntaxTreeNode root)
+        private void Parse(NonTerminal nonTerminal, SyntaxTreeNode root)
         {
+            // Получаем продукцию из таблицы предсказаний
             if (predictionTable.TryGetValue((nonTerminal, CurrentToken.Type), out string production))
             {
+                // Разбиваем строку продукции на отдельные символы
                 var symbols = production.Split(new[] { ' ', '\t', '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
-                SyntaxTreeNode parentNode = new SyntaxTreeNode(new Token(CurrentToken.Type, nonTerminal));
+                SyntaxTreeNode parentNode = new SyntaxTreeNode(new Symbol(nonTerminal));
                 root.AddChild(parentNode);
 
                 foreach (var symbol in symbols)
                 {
-                    if (symbol.StartsWith("<") && symbol.EndsWith(">")) // Нетерминал
+                    if (Enum.TryParse(symbol, out NonTerminal parsedNonTerminal)) // Проверка, является ли символ нетерминалом
                     {
-                        Parse(symbol, parentNode); // Изменён корень на parentNode
+                        // Рекурсивный вызов Parse для нетерминала
+                        Parse(parsedNonTerminal, parentNode);
                     }
                     else if (symbol == "ε") // Пустое правило
                     {
@@ -83,9 +147,10 @@ namespace compiler
                     }
                     else // Терминал
                     {
-                           // Console.WriteLine(symbol);
-                            parentNode.AddChild(new SyntaxTreeNode(CurrentToken)); // Изменён корень на parentNode
-                            Advance();     
+                        // Создаем новый узел дерева для терминала и добавляем его
+                        SyntaxTreeNode terminalNode = new SyntaxTreeNode(new Symbol(CurrentToken));
+                        parentNode.AddChild(terminalNode);
+                        Advance(); // Переходим к следующему токену
                     }
                 }
             }
@@ -93,105 +158,103 @@ namespace compiler
             {
                 root.PrintTree();
                 throw new Exception($"Синтаксическая ошибка: текущий токен '{CurrentToken}' не соответствует ни одному правилу из '{nonTerminal}'");
-               
             }
         }
 
-        private static Dictionary<(string, TokenType), string> predictionTable = new Dictionary<(string, TokenType), string>
+        private static Dictionary<(NonTerminal, TokenType), string> predictionTable = new Dictionary<(NonTerminal, TokenType), string>
 {
     // Программа
-    { ("<Программа>", TokenType.VAR), "<Объявление_переменных> <Описание_вычислений>" },
+    { (NonTerminal.Программа, TokenType.VAR), "Объявление_переменных Описание_вычислений" },
 
-    // Объявление переменных  
-    { ("<Объявление_переменных>", TokenType.VAR), "VAR <Список_переменных> : INTEGER ; " },
+    // Объявление переменных
+    { (NonTerminal.Объявление_переменных, TokenType.VAR), "VAR Список_переменных : INTEGER ;" },
 
     // Список переменных
-    { ("<Список_переменных>", TokenType.IDENT), "<Идент> <Доп_переменные>" },
+    { (NonTerminal.Список_переменных, TokenType.IDENT), "Идент Доп_переменные" },
 
     // Дополнительные переменные
-    { ("<Доп_переменные>", TokenType.COMMA), ", <Список_переменных>" },
-    { ("<Доп_переменные>", TokenType.COLON), "ε" }, // конец списка
+    { (NonTerminal.Доп_переменные, TokenType.COMMA), ", Список_переменных" },
+    { (NonTerminal.Доп_переменные, TokenType.COLON), "ε" }, // конец списка
 
     // Описание вычислений
-    { ("<Описание_вычислений>", TokenType.BEGIN), "BEGIN <Список_операторов> END" },
+    { (NonTerminal.Описание_вычислений, TokenType.BEGIN), "BEGIN Список_операторов END" },
 
     // Список операторов
-    { ("<Список_операторов>", TokenType.IDENT), "<Оператор> <Список_операторов_хвост>" },
-    { ("<Список_операторов>", TokenType.READ), "<Оператор> <Список_операторов_хвост>" },
-    { ("<Список_операторов>", TokenType.WRITE), "<Оператор> <Список_операторов_хвост>" },
-    { ("<Список_операторов>", TokenType.FOR), "<Оператор> <Список_операторов_хвост>" },
-    { ("<Список_операторов>", TokenType.END), "ε" },
-    { ("<Список_операторов>", TokenType.END_FOR), "ε" },
+    { (NonTerminal.Список_операторов, TokenType.IDENT), "Оператор Список_операторов_хвост" },
+    { (NonTerminal.Список_операторов, TokenType.READ), "Оператор Список_операторов_хвост" },
+    { (NonTerminal.Список_операторов, TokenType.WRITE), "Оператор Список_операторов_хвост" },
+    { (NonTerminal.Список_операторов, TokenType.FOR), "Оператор Список_операторов_хвост" },
+    { (NonTerminal.Список_операторов, TokenType.END), "ε" },
+    { (NonTerminal.Список_операторов, TokenType.END_FOR), "ε" },
 
     // Список операторов хвост
-    { ("<Список_операторов_хвост>", TokenType.SEMICOLON), "; <Список_операторов>" },
-    { ("<Список_операторов_хвост>", TokenType.END), "ε" },
-    { ("<Список_операторов_хвост>", TokenType.END_FOR), "ε" },
-    { ("<Список_операторов_хвост>", TokenType.CONST), "Конст" },
+    { (NonTerminal.Список_операторов_хвост, TokenType.SEMICOLON), "; Список_операторов" },
+    { (NonTerminal.Список_операторов_хвост, TokenType.END), "ε" },
+    { (NonTerminal.Список_операторов_хвост, TokenType.END_FOR), "ε" },
+    { (NonTerminal.Список_операторов_хвост, TokenType.CONST), "Конст" },
 
     // Оператор
-    { ("<Оператор>", TokenType.IDENT), "<Присваивание>" },
-    { ("<Оператор>", TokenType.READ), "<Чтение>" },
-    { ("<Оператор>", TokenType.WRITE), "<Запись>" },
-    { ("<Оператор>", TokenType.FOR), "<Цикл>" },
+    { (NonTerminal.Оператор, TokenType.IDENT), "Присваивание" },
+    { (NonTerminal.Оператор, TokenType.READ), "Чтение" },
+    { (NonTerminal.Оператор, TokenType.WRITE), "Запись" },
+    { (NonTerminal.Оператор, TokenType.FOR), "Цикл" },
 
     // Присваивание
-    { ("<Присваивание>", TokenType.IDENT), "<Идент> = <Выражение>" },
+    { (NonTerminal.Присваивание, TokenType.IDENT), "Идент = Выражение" },
 
     // Выражение
-    { ("<Выражение>", TokenType.MINUS), "<Ун_оп> <Подвыражение>" },
-    { ("<Выражение>", TokenType.LPAREN), "<Подвыражение>" },
-    { ("<Выражение>", TokenType.IDENT), "<Подвыражение>" },
-    { ("<Выражение>", TokenType.CONST), "<Подвыражение>" },
+    { (NonTerminal.Выражение, TokenType.MINUS), "Ун_оп Подвыражение" },
+    { (NonTerminal.Выражение, TokenType.LPAREN), "Подвыражение" },
+    { (NonTerminal.Выражение, TokenType.IDENT), "Подвыражение" },
+    { (NonTerminal.Выражение, TokenType.CONST), "Подвыражение" },
 
-    // Подвыражение с учетом скобок
-    { ("<Подвыражение>", TokenType.LPAREN), "( <Выражение> ) <Подвыражение_хвост>" },
-    { ("<Подвыражение>", TokenType.IDENT), "<Операнд> <Подвыражение_хвост>" },
-    { ("<Подвыражение>", TokenType.CONST), "<Операнд> <Подвыражение_хвост>" },
+    // Подвыражение
+    { (NonTerminal.Подвыражение, TokenType.LPAREN), "( Выражение ) Подвыражение_хвост" },
+    { (NonTerminal.Подвыражение, TokenType.IDENT), "Операнд Подвыражение_хвост" },
+    { (NonTerminal.Подвыражение, TokenType.CONST), "Операнд Подвыражение_хвост" },
 
     // Подвыражение хвост
-    { ("<Подвыражение_хвост>", TokenType.PLUS), "<Бин_оп> <Подвыражение>" },
-    { ("<Подвыражение_хвост>", TokenType.MINUS), "<Бин_оп> <Подвыражение>" },
-    { ("<Подвыражение_хвост>", TokenType.MULT), "<Бин_оп> <Подвыражение>" },
-    { ("<Подвыражение_хвост>", TokenType.SEMICOLON), "ε" },
-    { ("<Подвыражение_хвост>", TokenType.RPAREN), "ε" },
-    { ("<Подвыражение_хвост>", TokenType.TO), "ε" },
-    { ("<Подвыражение_хвост>", TokenType.DO), "ε" },
+    { (NonTerminal.Подвыражение_хвост, TokenType.PLUS), "Бин_оп Подвыражение" },
+    { (NonTerminal.Подвыражение_хвост, TokenType.MINUS), "Бин_оп Подвыражение" },
+    { (NonTerminal.Подвыражение_хвост, TokenType.MULT), "Бин_оп Подвыражение" },
+    { (NonTerminal.Подвыражение_хвост, TokenType.SEMICOLON), "ε" },
+    { (NonTerminal.Подвыражение_хвост, TokenType.RPAREN), "ε" },
+    { (NonTerminal.Подвыражение_хвост, TokenType.TO), "ε" },
+    { (NonTerminal.Подвыражение_хвост, TokenType.DO), "ε" },
 
-    // Ун.оп.
-    { ("<Ун_оп>", TokenType.MINUS), "-" },
+    // Ун_оп
+    { (NonTerminal.Ун_оп, TokenType.MINUS), "-" },
 
-    // Бин.оп.
-    { ("<Бин_оп>", TokenType.PLUS), "+" },
-    { ("<Бин_оп>", TokenType.MINUS), "-" },
-    { ("<Бин_оп>", TokenType.MULT), "*" },
+    // Бин_оп
+    { (NonTerminal.Бин_оп, TokenType.PLUS), "+" },
+    { (NonTerminal.Бин_оп, TokenType.MINUS), "-" },
+    { (NonTerminal.Бин_оп, TokenType.MULT), "*" },
 
     // Операнд
-    { ("<Операнд>", TokenType.IDENT), "<Идент>" },
-    { ("<Операнд>", TokenType.CONST), "<Конст>" },
+    { (NonTerminal.Операнд, TokenType.IDENT), "Идент" },
+    { (NonTerminal.Операнд, TokenType.CONST), "Конст" },
 
     // Идент
-    { ("<Идент>", TokenType.IDENT), "Идентификатор" },
+    { (NonTerminal.Идент, TokenType.IDENT), "Идентификатор" },
 
     // Конст
-    { ("<Конст>", TokenType.CONST), "Константа" },
+    { (NonTerminal.Конст, TokenType.CONST), "Константа" },
 
-    // Чтение с учетом скобок
-    { ("<Чтение>", TokenType.READ), "READ ( <Список_идентификаторов> )" },
+    // Чтение
+    { (NonTerminal.Чтение, TokenType.READ), "READ ( Список_идентификаторов )" },
 
-    // Запись с учетом скобок
-    { ("<Запись>", TokenType.WRITE), "WRITE ( <Список_идентификаторов> )" },
+    // Запись
+    { (NonTerminal.Запись, TokenType.WRITE), "WRITE ( Список_идентификаторов )" },
 
     // Список идентификаторов
-    { ("<Список_идентификаторов>", TokenType.IDENT), "<Идент> <Доп_идентификаторы>" },
+    { (NonTerminal.Список_идентификаторов, TokenType.IDENT), "Идент Доп_идентификаторы" },
 
     // Дополнительные идентификаторы
-    { ("<Доп_идентификаторы>", TokenType.COMMA), ", <Список_идентификаторов>" },
-    { ("<Доп_идентификаторы>", TokenType.RPAREN), "ε" },
+    { (NonTerminal.Доп_идентификаторы, TokenType.COMMA), ", Список_идентификаторов" },
+    { (NonTerminal.Доп_идентификаторы, TokenType.RPAREN), "ε" },
 
     // Цикл
-    { ("<Цикл>", TokenType.FOR), "FOR <Идент> = <Выражение> TO <Выражение> DO <Список_операторов> ENDFOR" },
+    { (NonTerminal.Цикл, TokenType.FOR), "FOR Идент = Выражение TO Выражение DO Список_операторов ENDFOR" },
 };
-
     }
 }
