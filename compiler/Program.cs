@@ -8,7 +8,7 @@ BEGIN x = 5 + 10;
     y = 10;
     z = -(-9 + (10 - 10) * y);
     WRITE(x,y);
-    FOR i = 0 TO 10 DO WRITE(ooo,i); ENDFOR
+    FOR i = 0 TO 10 DO WRITE(i); ENDFOR
 END";
 
 
