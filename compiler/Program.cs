@@ -1,12 +1,23 @@
 ﻿using compiler;
-    
+using compiler.compiler;
+using compiler.compiler.compiler;
+
 string input = @"
-VAR x,y : INTEGER
+VAR x,y,i : INTEGER;
 BEGIN x = 5 + 10; 
     y = 10;
+    z = -(-9 + (10 - 10) * y);
     WRITE(x,y);
-    FOR x = 0 TO 10 DO WRITE(x); ENDFOR
+    FOR i = 0 TO 10 DO WRITE(i); ENDFOR
 END";
+
+
+//string input = @"
+//VAR x : INTEGER;
+//BEGIN x = 5 + 10; 
+//    WRITE(x);
+//END";
+
 Lexer lexer = new Lexer(input);
 
  Token token;
@@ -18,4 +29,8 @@ var tokens = new List<Token>();
  } while (token.Type != TokenType.EOF);
 
 var synt = new Syntacsys(tokens);
-synt.ParseProgram().PrintTree();
+var tree = synt.ParseProgram();
+
+tree.PrintTree();
+var gener = new Translator().Translate(tree);
+Console.WriteLine(gener.ToString());
