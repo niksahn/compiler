@@ -39,6 +39,7 @@ namespace compiler
 
     public enum NonTerminal
     {
+        START_FILE,
         Программа,
         Объявление_переменных,
         Список_переменных,
@@ -119,8 +120,8 @@ namespace compiler
         public SyntaxTreeNode ParseProgram()
         {
             // Создаем корневой узел для дерева с нетерминалом "Программа"
-            SyntaxTreeNode root = new SyntaxTreeNode(new Symbol(NonTerminal.Программа));
-            Parse(NonTerminal.Программа, root);
+            SyntaxTreeNode root = new SyntaxTreeNode(new Symbol(NonTerminal.START_FILE));
+            Parse(NonTerminal.START_FILE, root);
             return root;
         }
 
@@ -163,7 +164,11 @@ namespace compiler
 
         private static Dictionary<(NonTerminal, TokenType), string> predictionTable = new Dictionary<(NonTerminal, TokenType), string>
 {
+            
+    { (NonTerminal.START_FILE, TokenType.VAR), "Программа" },
+
     // Программа
+
     { (NonTerminal.Программа, TokenType.VAR), "Объявление_переменных Описание_вычислений" },
 
     // Объявление переменных

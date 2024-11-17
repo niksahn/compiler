@@ -62,19 +62,21 @@ namespace compiler
                             TraverseChildren(node);
                             break;
 
+                        case NonTerminal.Чтение:
                         case NonTerminal.Запись:
-                            // Проверка всех переменных, которые выводятся на консоль
-                            foreach (var child in node.Children)
-                            {
-                                if (!child.Symbol.IsNonTerminal() && child.Symbol.Token.Type == TokenType.IDENT)
-                                {
-                                    string outputVariable = child.Symbol.Token.Value;
-                                    if (!symbolTable.ContainsKey(outputVariable))
-                                    {
-                                        throw new Exception($"Ошибка: переменная '{outputVariable}' не объявлена.");
-                                    }
-                                }
-                            }
+                            //// Проверка всех переменных, которые выводятся на консоль
+                            //foreach (var child in node.Children)
+                            //{
+                            //    if (!child.Symbol.IsNonTerminal() && child.Symbol.Token.Type == TokenType.IDENT)
+                            //    {
+                            //        string outputVariable = child.Symbol.Token.Value;
+                            //        if (!symbolTable.ContainsKey(outputVariable))
+                            //        {
+                            //            throw new Exception($"Ошибка: переменная '{outputVariable}' не объявлена.");
+                            //        }
+                            //    }
+                            //}
+                            CheckSubTree(node);
                             break;
 
                         case NonTerminal.Цикл:

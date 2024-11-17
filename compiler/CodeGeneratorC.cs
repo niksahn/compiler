@@ -31,10 +31,10 @@
                                 case NonTerminal.Программа:
                                     outputCode.AppendLine("public class Program");
                                     outputCode.AppendLine("{");
-                                    outputCode.AppendLine("    public static void Main()");
-                                    outputCode.AppendLine("    {");
+                                    outputCode.AppendLine("public static void Main()");
+                                    outputCode.AppendLine("{");
                                     TraverseChildren(node);
-                                    outputCode.AppendLine("    }");
+                                    outputCode.AppendLine("}");
                                     outputCode.AppendLine("}");
                                     break;
 
@@ -44,6 +44,7 @@
                                     outputCode.AppendLine(";");
                                     break;
 
+                                case NonTerminal.START_FILE:
                                 case NonTerminal.Список_переменных:
                                 case NonTerminal.Доп_переменные:
                                 case NonTerminal.Описание_вычислений:
@@ -72,7 +73,13 @@
                                     outputCode.AppendLine(");");
                                     break;
 
-                                case NonTerminal.Подвыражение:
+                            case NonTerminal.Чтение:
+                                outputCode.Append("Console.ReadLine(");
+                                TraverseNode(node.Children[2]); // Список идентификаторов
+                                outputCode.AppendLine(");");
+                                break;
+
+                            case NonTerminal.Подвыражение:
                                  
                                         TraverseChildren(node);
                                    

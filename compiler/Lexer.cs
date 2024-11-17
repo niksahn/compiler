@@ -67,6 +67,20 @@ namespace compiler
             _position = 0;
         }
 
+        public List<Token> GetTokens()
+        {
+            var tokens = new List<Token>();
+            var token = GetNextToken();
+            do
+            {
+             
+                tokens.Add(token);
+                token = GetNextToken();
+
+            } while (token.Type != TokenType.EOF);
+            return tokens;
+        }
+
         private char CurrentChar => _position >= _input.Length ? '\0' : _input[_position];
 
         private void Advance() => _position++;

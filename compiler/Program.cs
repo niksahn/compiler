@@ -2,36 +2,53 @@
 using compiler.compiler;
 using compiler.compiler.compiler;
 
-string input = @"
-VAR x,y,i,z : INTEGER;
-BEGIN x = 5 + 10; 
-    y = 10;
-    z = -(-9 + (10 - 10) * y);
-    WRITE(x,y);
-    FOR i = 0 TO 10 DO WRITE(i); ENDFOR
-END";
+using System;
+using System.IO;
 
+class Program
+{
+    static void Main(string[] args)
+    {
+        string input = "";
 
-//string input = @"
-//VAR x : INTEGER;
-//BEGIN x = 5 + 10; 
-//    WRITE(x);
-//END";
+        if (args.Length > 0)
+        {
+            // Проверяем, указан ли файл в аргументах
+            string fileName = args[0];
 
-Lexer lexer = new Lexer(input);
+            if (File.Exists(fileName))
+            {
+                // Читаем содержимое файла, если он существует
+                input = File.ReadAllText(fileName);
+                Console.WriteLine($"Содержимое файла '{fileName}' загружено.");
+            }
+            else
+            {
+                Console.WriteLine($"Файл '{fileName}' не найден.");
+                return;
+            }
+        }
+        else
+        {
+            // Если файл не указан, запрашиваем ввод у пользователя
+            Console.WriteLine("Введите код программы:");
 
- Token token;
-var tokens = new List<Token>();
- do
- {
-     token = lexer.GetNextToken();
-     tokens.Add(token);
- } while (token.Type != TokenType.EOF);
+            string cur = "";
+            while (cur != "END")
+            {
+                cur = Console.ReadLine();
+                input += "\n" + cur;
+            }
+        }
 
-var synt = new Syntacsys(tokens);
-var tree = synt.ParseProgram();
+        Lexer lexer = new Lexer(input);
 
-tree.PrintTree();
-new SemanticAnalyzer().Analyze(tree);
-var gener = new Translator().Translate(tree);
-Console.WriteLine(gener.ToString());
+        var tokens = lexer.GetTokens();
+        var synt = new Syntacsys(tokens);
+        var tree = synt.ParseProgram();
+        Console.WriteLine("\nкод прогрраммы C#:\n");
+        new SemanticAnalyzer().Analyze(tree);
+        var gener = new Translator().Translate(tree);
+        Console.WriteLine(gener.ToString());
+    }
+}
