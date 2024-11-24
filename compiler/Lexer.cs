@@ -1,11 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace compiler
+﻿namespace compiler
 {
     public enum TokenType
     {
@@ -112,6 +105,9 @@ namespace compiler
                 result += CurrentChar;
                 Advance();
             }
+            if (result.Any(CurrentChar => char.IsDigit(CurrentChar))) throw new Exception($"в названии переменой содержится число: {result}");
+
+            if (result.Length > 8) throw new Exception($"Слишком длинный идентификатор: {result}");
 
             if (_keywords.ContainsKey(result))
             {
@@ -121,7 +117,7 @@ namespace compiler
             return new Token(TokenType.IDENT, result);
         }
 
-        public Token GetNextToken()
+        private Token GetNextToken()
         {
             while (CurrentChar != '\0')
             {
@@ -153,5 +149,4 @@ namespace compiler
             return new Token(TokenType.EOF, null);
         }
     }
-
 }

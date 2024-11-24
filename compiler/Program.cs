@@ -2,14 +2,14 @@
 using compiler.compiler;
 using compiler.compiler.compiler;
 
-using System;
-using System.IO;
-
 class Program
 {
-
-    static void Main(string[] args)
+    async static Task Main(string[] args)
     {
+        var originalOut = Console.Out;  // Сохраняем стандартный вывод
+        var stringWriter = new StringWriter();
+       
+
         string input = "";
 
         if (args.Length > 0)
@@ -41,15 +41,17 @@ class Program
                 input += "\n" + cur;
             }
         }
-
         Lexer lexer = new Lexer(input);
-
         var tokens = lexer.GetTokens();
         var synt = new Syntacsys(tokens);
         var tree = synt.ParseProgram();
-        Console.WriteLine("\nкод прогрраммы C#:\n");
+        Console.WriteLine("\nкод программы C#:\n");
         new SemanticAnalyzer().Analyze(tree);
-        var gener = new Translator().Translate(tree);
-        Console.WriteLine(gener.ToString());
+        var gener = new Translator().Translate(tree).ToString();
+        Console.WriteLine(gener);
+       // Console.WriteLine("\nВведите название файла в который хотите сохранить скомпилированный код:\n");
+      //  var compileFileName = Console.ReadLine();
+        Console.WriteLine("\nход работы прогрраммы C#:\n");
+       CodeRunner.RunCode(gener, null);
     }
 }

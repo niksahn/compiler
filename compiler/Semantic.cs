@@ -30,59 +30,23 @@ namespace compiler
                 {
                     switch (node.Symbol.NonTerminal)
                     {
-                        case NonTerminal.Программа:
-                            TraverseChildren(node);
-                            break;
-
                         case NonTerminal.Объявление_переменных:
                             AddSubIdents(node);
                             break;
 
                         case NonTerminal.Присваивание:
                             CheckSubTree(node);
-
-                            // Рекурсивный обход для проверки выражения присваивания
-                            TraverseNode(node.Children[2]); // Выражение справа от присваивания
+                            TraverseNode(node.Children[2]); 
                             break;
-
-                        //case NonTerminal.Идент:
-                        //    string id = node.FirstIdent().Symbol.Token.Value;
-
-                        //    // Проверка на использование необъявленной переменной
-                        //    if (!symbolTable.ContainsKey(id))
-                        //    {
-                        //        throw new Exception($"Ошибка: переменная '{id}' не объявлена.");
-                        //    }
-                        //    break;
-
-                     
-
-                        case NonTerminal.Бин_оп:
-                            // Проверка типов для бинарных операций
-                            TraverseChildren(node);
-                            break;
+                    
 
                         case NonTerminal.Чтение:
                         case NonTerminal.Запись:
-                            //// Проверка всех переменных, которые выводятся на консоль
-                            //foreach (var child in node.Children)
-                            //{
-                            //    if (!child.Symbol.IsNonTerminal() && child.Symbol.Token.Type == TokenType.IDENT)
-                            //    {
-                            //        string outputVariable = child.Symbol.Token.Value;
-                            //        if (!symbolTable.ContainsKey(outputVariable))
-                            //        {
-                            //            throw new Exception($"Ошибка: переменная '{outputVariable}' не объявлена.");
-                            //        }
-                            //    }
-                            //}
                             CheckSubTree(node);
                             break;
 
                         case NonTerminal.Цикл:
-                            // Проверка правильности цикла и инициализации переменных
                             CheckSubTree(node);
-
                             TraverseNode(node.Children[3]); // Начальное значение цикла
                             TraverseNode(node.Children[5]); // Конечное значение цикла
                             TraverseNode(node.Children[7]); // Список операторов в теле цикла
